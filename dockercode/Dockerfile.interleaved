@@ -1,0 +1,6 @@
+# Dockerfile.interleaved
+FROM public.ecr.aws/lambda/python:3.12
+COPY requirements.txt ${LAMBDA_TASK_ROOT}
+RUN pip install -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
+COPY interleaved_worker_lambda.py ${LAMBDA_TASK_ROOT}
+CMD [ "interleaved_worker_lambda.lambda_handler" ]

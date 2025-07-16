@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AWS Agents Interface</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-start: #e0e7ff;
+            --bg-gradient-end: #f0f9ff;
+            --card-bg-color: rgba(255, 255, 255, 0.9);
+            --text-color: #1f2937;
+            --text-muted: #4b5563;
+            --accent-color: #3b82f6;
+            --accent-hover-color: #2563eb;
+            --border-color: #e5e7eb;
+            --shadow-color: rgba(100, 116, 139, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-image: linear-gradient(120deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+            position: relative;
+            /* --- SCROLLING FIX --- */
+            /* Removed 'overflow: hidden' to allow page content to scroll */
+        }
+
+        /* --- Aurora Background Effect (Subtler for bright theme) --- */
+        .aurora-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            /* --- SCROLLING FIX --- */
+            /* Moved 'overflow: hidden' here to contain the blobs */
+            overflow: hidden;
+        }
+
+        .aurora-bg .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.3;
+        }
+
+        .blob.cyan {
+            background: #a7f3d0; /* Light Mint */
+            width: 400px;
+            height: 400px;
+            top: -50px;
+            left: -100px;
+            animation: move-blob-1 20s infinite alternate ease-in-out;
+        }
+
+        .blob.magenta {
+            background: #fbcfe8; /* Light Pink */
+            width: 500px;
+            height: 500px;
+            bottom: -150px;
+            right: -150px;
+            animation: move-blob-2 22s infinite alternate ease-in-out;
+        }
+
+        @keyframes move-blob-1 {
+            from { transform: translate(-50px, -50px) scale(1); }
+            to { transform: translate(100px, 100px) scale(1.2); }
+        }
+
+        @keyframes move-blob-2 {
+            from { transform: translate(50px, 50px) scale(1.2); }
+            to { transform: translate(-100px, -100px) scale(1); }
+        }
+
+        /* --- Main Content --- */
+        .main-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            font-weight: 600;
+            text-align: center;
+            color: #111827;
+            margin-bottom: 10px;
+        }
+
+        .header-nav {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        .header-nav a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* --- Floating Card Effect --- */
+        .agent-section {
+            background: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px var(--shadow-color);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-weight: 500;
+            color: #111827;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        
+        p {
+            color: var(--text-muted);
+        }
+
+        /* --- Form Elements --- */
+        textarea {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1em;
+            color: var(--text-color);
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        button {
+            padding: 14px 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent-color);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        /* --- Result Box --- */
+        .result-box {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            background-color: #ffffff;
+            min-height: 50px;
+            line-height: 1.7;
+        }
+        .status { font-style: italic; color: var(--text-muted); }
+
+    </style>
+</head>
+<body>
+    <div class="aurora-bg">
+        <div class="blob cyan"></div>
+        <div class="blob magenta"></div>
+    </div>
+
+    <div class="main-container">
+        <h1>AWS Agents Interface</h1>
+        <p class="header-nav">Welcome, <%= user.username %>! | <a href="/logout">Logout</a></p>
+
+        <div class="agent-section">
+            <h2>Standard Agent Orchestrator</h2>
+            <p>Routes tasks to specialists like research, product recommendations, or travel planning.</p>
+            <form id="standard-agent-form">
+                <textarea name="query" placeholder="e.g., 'Plan a 5-day culinary tour of Italy'" rows="3" required></textarea>
+                <button type="submit">Submit</button>
+            </form>
+            <div id="standard-agent-result" class="result-box" style="display: none;"></div>
+        </div>
+
+        <div class="agent-section">
+            <h2>Interleaved Thinking Orchestrator</h2>
+            <p>Analyzes complex tasks using a multi-step workflow for in-depth answers.</p>
+            <form id="interleaved-agent-form">
+                <textarea name="query" placeholder="e.g., 'Analyze the impact of remote work on productivity'" rows="3" required></textarea>
+                <button type="submit">Submit</button>
+            </form>
+            <div id="interleaved-agent-result" class="result-box" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // This JavaScript is unchanged
+        const standardForm = document.getElementById('standard-agent-form');
+        const interleavedForm = document.getElementById('interleaved-agent-form');
+        const standardResultBox = document.getElementById('standard-agent-result');
+        const interleavedResultBox = document.getElementById('interleaved-agent-result');
+
+        standardForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = e.target.elements.query.value;
+            handleJobSubmit(query, '/submit-standard-agent', standardResultBox);
+        });
+
+        interleavedForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = e.target.elements.query.value;
+            handleJobSubmit(query, '/submit-interleaved-agent', interleavedResultBox);
+        });
+
+        async function handleJobSubmit(query, endpoint, resultBox) {
+            if (!query) return;
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = '<p class="status">Submitting job...</p>';
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({ query })
+                });
+                const data = await response.json();
+                pollForResult(data.jobId, resultBox);
+            } catch (error) {
+                resultBox.innerHTML = '<p class="status">Error starting job.</p>';
+                console.error('Submit error:', error);
+            }
+        }
+
+        function pollForResult(jobId, resultBox) {
+            resultBox.innerHTML = '<p class="status">Job submitted. Your AI agent is thinking... this may take a moment.</p>';
+            const intervalId = setInterval(async () => {
+                try {
+                    const response = await fetch(`/status/${jobId}`);
+                    const data = await response.json();
+                    if (data.status === 'COMPLETE') {
+                        clearInterval(intervalId);
+                        resultBox.innerHTML = data.result;
+                    } else if (data.status === 'FAILED') {
+                        clearInterval(intervalId);
+                        resultBox.innerHTML = `<p class="status">Job Failed:</p><p>${data.result}</p>`;
+                    }
+                } catch (error) {
+                    clearInterval(intervalId);
+                    resultBox.innerHTML = '<p class="status">An error occurred while fetching the result.</p>';
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

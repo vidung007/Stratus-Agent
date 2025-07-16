@@ -1,0 +1,8 @@
+# Ignore the large Python Lambda Layer folder
+dockercode/python/
+
+# Ignore Node.js dependencies in any sub-project
+**/node_modules
+
+# Ignore environment variable files in any sub-project
+**/.env
