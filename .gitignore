@@ -6,3 +6,17 @@ dockercode/python/
 
 # Ignore environment variable files in any sub-project
 **/.env
+
+# Ignore Terraform state and providers
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Ignore macOS metadata files
+.DS_Store
+
+# Ignore large dependency archives
+dockercode/standard-dependencies.zip
+
+# Ignore Node.js dependency folders
+node_modules/
