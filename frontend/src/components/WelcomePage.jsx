@@ -29,7 +29,7 @@ const WelcomePage = ({ onSignIn }) => {
     <div className="welcome-wrapper">
       <div className="starfield"></div>
       <div className="welcome-container">
-        <h1>ProfitPoint Negotiator</h1>
+        <h1>Stratus Agent</h1>
         <p>Harnessing advanced AI to forge the perfect deal. Unlock optimal promotions and maximize profitability for distributors and retailers alike.</p>
         
         {/* Changed from an <a> tag to a button with an onClick handler */}

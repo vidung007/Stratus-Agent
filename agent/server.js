@@ -1,38 +1,40 @@
-// server.js
+// agent-express-backend/server.js
 
-// 1. Import Dependencies
-require('dotenv').config(); // Loads environment variables from .env file
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const axios = require('axios');
-const path = require('path');
+const cors = require('cors');
 
-// 2. Initialize Express App and Load Config
 const app = express();
-app.set('view engine', 'ejs');
 const PORT = 3000;
 
+// Get credentials from the .env file
 const { 
   COGNITO_DOMAIN, 
   COGNITO_CLIENT_ID, 
   COGNITO_CLIENT_SECRET, 
-  CALLBACK_URL 
+  CALLBACK_URL,
+  AI_BACKEND_API_URL 
 } = process.env;
 
-// 3. Configure Session Middleware
-// This creates a cookie to keep the user logged in.
+
+// --- Middleware Setup ---
+app.use(cors({
+    origin: 'http://localhost:5173', // Address of your React dev server
+    credentials: true // Allows session cookies to be sent
+}));
+app.use(express.json()); // Middleware to parse incoming JSON requests
 app.use(session({
-  secret: 'a-super-secret-key-that-should-be-in-env', // In production, use a long, random string from your .env file
+  secret: 'a-super-secret-key-that-should-be-in-env',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } // In production, set this to true if using HTTPS
+  cookie: { secure: false } 
 }));
 
-app.use(express.urlencoded({ extended: true }));
 
-// 4. Define Authentication Routes
+// --- Authentication Routes (for browser redirects) ---
 
-// Redirects the user to the Cognito Hosted UI for login
 app.get('/login', (req, res) => {
   const loginUrl = new URL(`${COGNITO_DOMAIN}/login`);
   loginUrl.searchParams.append('response_type', 'code');
@@ -42,16 +44,19 @@ app.get('/login', (req, res) => {
   res.redirect(loginUrl.toString());
 });
 
-// Cognito redirects back to this route after a successful login
+app.get('/logout', (req, res) => {
+  const logoutUrl = new URL(`${COGNITO_DOMAIN}/logout`);
+  logoutUrl.searchParams.append('client_id', COGNITO_CLIENT_ID);
+  logoutUrl.searchParams.append('logout_uri', 'http://localhost:5173'); 
+  
+  req.session.destroy(() => {
+    res.redirect(logoutUrl.toString());
+  });
+});
+
 app.get('/auth/callback', async (req, res) => {
   const { code } = req.query;
-
-  if (!code) {
-    return res.status(400).send('Error: Authorization code not found.');
-  }
-
   try {
-    // Exchange the authorization code for tokens
     const tokenUrl = new URL(`${COGNITO_DOMAIN}/oauth2/token`);
     const response = await axios.post(
       tokenUrl.toString(),
@@ -62,134 +67,63 @@ app.get('/auth/callback', async (req, res) => {
         redirect_uri: CALLBACK_URL,
         code: code,
       }),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      }
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
-
-    // Store tokens in the session
     req.session.tokens = response.data;
     
-    // For simplicity, we can fetch user info here or decode the id_token
-    // Let's get user info from the /oauth2/userInfo endpoint
     const userInfoUrl = new URL(`${COGNITO_DOMAIN}/oauth2/userInfo`);
     const userResponse = await axios.get(userInfoUrl.toString(), {
-        headers: {
-            'Authorization': `Bearer ${req.session.tokens.access_token}`
-        }
+        headers: { 'Authorization': `Bearer ${req.session.tokens.access_token}` }
     });
-    
-    // Store user info in the session
     req.session.user = userResponse.data;
-
-    // Redirect to the homepage
-    res.redirect('/');
-
+    
+    res.redirect('http://localhost:5173'); 
   } catch (error) {
-    console.error('Error exchanging code for tokens:', error.response ? error.response.data : error.message);
-    res.status(500).send('Authentication failed.');
+    console.error('Authentication failed:', error.response ? error.response.data : error.message);
+    res.redirect('http://localhost:5173');
   }
 });
 
-// Logs the user out
-app.get('/logout', (req, res) => {
-  const logoutUrl = new URL(`${COGNITO_DOMAIN}/logout`);
-  logoutUrl.searchParams.append('client_id', COGNITO_CLIENT_ID);
-  logoutUrl.searchParams.append('logout_uri', `http://localhost:${PORT}/login`); // Redirect to login after logout
-  
-  // Destroy the local session
-  req.session.destroy(err => {
-    if (err) {
-      return res.status(500).send('Could not log out.');
-    }
-    // Redirect to Cognito's logout page
-    res.redirect(logoutUrl.toString());
-  });
-});
 
-// 5. Define a Middleware to Protect Routes
+// --- JSON API Routes (for the React app's 'fetch' requests) ---
+
 const isAuthenticated = (req, res, next) => {
-  if (req.session.user) {
-    // If user is in the session, proceed
-    return next();
-  }
-  // If not, redirect to login
-  res.redirect('/login');
+    if (req.session.user) {
+        return next();
+    }
+    res.status(401).json({ error: 'Not authenticated' });
 };
 
-// 6. Define Application Routes
-
-// The homepage is now protected by our 'isAuthenticated' middleware
-app.get('/', isAuthenticated, (req, res) => {
-  // This line finds views/index.ejs, injects the user object, and sends the HTML
-  res.render('index', { user: req.session.user });  
+app.get('/api/auth/status', (req, res) => {
+    res.json({ user: req.session.user || null });
 });
 
-// server.js -> Add these inside Section 6
-
-// This route handles the form submission from the UI
-app.post('/submit-standard-agent', isAuthenticated, async (req, res) => {
+// A single endpoint to start jobs for BOTH agents
+app.post('/api/submit-job', isAuthenticated, async (req, res) => {
     try {
-      const query = req.body.query;
-      const apiUrl = process.env.AI_BACKEND_API_URL; // We will add this to .env next
-  
-      // Call our AI backend's "starter" endpoint
-      const response = await axios.post(`${apiUrl}/standard-agent`, { query });
-      const { jobId } = response.data;
-  
-      // Redirect the user to a results page where they can wait
-      // res.redirect(`/results/${jobId}`);
-      res.json({ jobId });
+        const { query, agentType } = req.body;
+        // Determine the correct backend endpoint based on agentType
+        const endpoint = agentType === 'interleaved' ? '/interleaved-agent' : '/standard-agent';
+        
+        const response = await axios.post(`${AI_BACKEND_API_URL}${endpoint}`, { query });
+        res.json({ jobId: response.data.jobId });
     } catch (error) {
-      console.error('Error starting standard agent job:', error);
-      res.status(500).send('Failed to start AI job.');
+        console.error(`Error starting ${req.body.agentType} job:`, error);
+        res.status(500).json({ error: 'Failed to start AI job.' });
     }
-  });
+});
 
-  app.post('/submit-interleaved-agent', isAuthenticated, async (req, res) => {
+app.get('/api/status/:jobId', isAuthenticated, async (req, res) => {
     try {
-      const query = req.body.query;
-      const apiUrl = process.env.AI_BACKEND_API_URL;
-  
-      // Call the interleaved agent's "starter" endpoint
-      const response = await axios.post(`${apiUrl}/interleaved-agent`, { query });
-      const { jobId } = response.data;
-  
-      // Redirect to the same results page to show progress
-      // res.redirect(`/results/${jobId}`);
-      res.json({ jobId });
-
+        const { jobId } = req.params;
+        const response = await axios.get(`${AI_BACKEND_API_URL}/get-job-status?jobId=${jobId}`);
+        res.json(response.data);
     } catch (error) {
-      console.error('Error starting interleaved agent job:', error);
-      res.status(500).send('Failed to start AI job.');
+        res.status(500).json({ status: 'FAILED', result: 'Could not retrieve job status.' });
     }
-  });
-  
-  // This route displays the waiting page for a specific job
-  // app.get('/results/:jobId', isAuthenticated, (req, res) => {
-  //   res.render('results', { jobId: req.params.jobId, user: req.session.user });
-  // });
-  
-  // This is an API endpoint for the waiting page to check the job status
-  app.get('/status/:jobId', isAuthenticated, async (req, res) => {
-    try {
-      const { jobId } = req.params;
-      const apiUrl = process.env.AI_BACKEND_API_URL;
-  
-      // Call our AI backend's "status checker" endpoint
-      const response = await axios.get(`${apiUrl}/get-job-status?jobId=${jobId}`);
-  
-      // Send the status back to the browser
-      res.json(response.data);
-    } catch (error) {
-      console.error('Error checking job status:', error);
-      res.status(500).json({ status: 'FAILED', result: 'Could not retrieve job status.' });
-    }
-  });
+});
 
-// 7. Start the Server
+
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+    console.log(`Express server is running at http://localhost:${PORT}`);
 });
