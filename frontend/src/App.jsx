@@ -1,8 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
-import WelcomePage from './components/WelcomePage';
-import AgentInterface from './AgentInterface'; // Import our new component
-import './App.css'; // You can keep some minimal styling here
+import AgentInterface from './AgentInterface';
+import './App.css'; // Import our new styles
 
 const API_BASE_URL = 'http://localhost:3000';
 
@@ -10,6 +9,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check user session on load
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
@@ -33,23 +33,36 @@ function App() {
     window.location.href = `${API_BASE_URL}/logout`;
   };
 
-  if (isLoading) {
-    return <div>Loading session...</div>;
-  }
-  
-  if (user) {
-    return (
-      <div className="App">
-        <div className="header-nav">
-          <p>Welcome, {user.username}! | <button onClick={handleSignOut}>Sign Out</button></p>
-        </div>
-        <h1>ProfitPoint Negotiator</h1>
-        <AgentInterface user={user} />
+  // The main layout with the aurora background
+  return (
+    <>
+      <div className="aurora-bg">
+        <div className="blob cyan"></div>
+        <div className="blob magenta"></div>
       </div>
-    );
-  }
-
-  return <WelcomePage onSignIn={handleSignIn} />;
+    
+      <div className="App">
+        {isLoading ? (
+          <div>Loading...</div>
+        ) : user ? (
+          <>
+            <div className="header-nav">
+              <span>Welcome, {user.username}!</span>
+              <button onClick={handleSignOut}>Sign Out</button>
+            </div>
+            <h1>AI Negotiator</h1>
+            <AgentInterface user={user} />
+          </>
+        ) : (
+          <div className="welcome-container">
+            <h1>AI Negotiator</h1>
+            <p>Harnessing advanced AI to forge the perfect deal. Unlock optimal promotions and maximize profitability for distributors and retailers alike.</p>
+            <button onClick={handleSignIn} className="cta-button">Get Started</button>
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
 export default App;

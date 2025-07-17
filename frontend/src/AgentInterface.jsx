@@ -1,9 +1,8 @@
 // src/AgentInterface.jsx
-
 import React, { useState } from 'react';
 
-// This is the address of YOUR Express server
-const API_BASE_URL = 'http://localhost:3000';
+// NOTE: We need to pass the base URL of our Express BFF server
+const API_BASE_URL = 'http://localhost:3000'; 
 
 const AgentInterface = ({ user }) => {
   const [standardResult, setStandardResult] = useState('');
@@ -17,7 +16,6 @@ const AgentInterface = ({ user }) => {
     setResult('');
 
     try {
-      // Use `credentials: 'include'` to send the session cookie
       const response = await fetch(`${API_BASE_URL}/api/submit-job`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,7 +39,6 @@ const AgentInterface = ({ user }) => {
         if (!response.ok) throw new Error(`Server responded with status ${response.status}`);
         
         const data = await response.json();
-
         if (data.status === 'COMPLETE') {
           clearInterval(intervalId);
           setStatus('');
@@ -58,7 +55,7 @@ const AgentInterface = ({ user }) => {
   };
 
   return (
-    <div className="main-container">
+    <div>
       <div className="agent-section">
         <h2>Standard Agent Orchestrator</h2>
         <form onSubmit={(e) => {
@@ -73,7 +70,6 @@ const AgentInterface = ({ user }) => {
           <pre>{standardResult}</pre>
         </div>
       </div>
-
       <div className="agent-section">
         <h2>Interleaved Thinking Orchestrator</h2>
         <form onSubmit={(e) => {
